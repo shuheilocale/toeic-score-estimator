@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOEICスコア推定テスト</title>
+<meta name="description" content="約10分のミニテストで、TOEIC L&Rの予想スコアを確率分布として推定します。リスニング・リーディング両対応。">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%232a78d6' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%231c2a33'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="./">TOEIC<span class="reg">®</span>スコア推定テスト</a>
+  </div>
+</header>
+
+<main class="wrap" id="app">
+
+  <!-- スタート画面 -->
+  <section id="screen-start" class="screen">
+    <h1 class="headline">10分で、いまの実力を<br>「幅」で知る。</h1>
+    <p class="lead">正誤に合わせて難易度が変わる20問のミニテストです。結果は「あなたのスコアはこのあたり」という確率分布で表示します。1点刻みの断定はしません。</p>
+
+    <div class="spec-table" role="table" aria-label="テスト構成">
+      <div class="spec-row" role="row">
+        <span role="cell">リスニング</span>
+        <span role="cell">8問 / 約4分(音声はブラウザの読み上げ)</span>
+      </div>
+      <div class="spec-row" role="row">
+        <span role="cell">リーディング</span>
+        <span role="cell">12問 / 約6分(短文穴埋め+短い読解)</span>
+      </div>
+      <div class="spec-row" role="row">
+        <span role="cell">結果</span>
+        <span role="cell">推定スコアの分布と80%区間(L・R・合計)</span>
+      </div>
+    </div>
+
+    <div class="audio-check">
+      <button id="btn-audio-check" class="btn ghost" type="button">音声をテストする</button>
+      <span id="audio-check-status" class="audio-status" role="status"></span>
+    </div>
+    <p class="hint">静かな場所でイヤホンの使用をおすすめします。音声が出ない環境では、リスニングは英文スクリプトの読解に切り替わります。</p>
+
+    <button id="btn-start" class="btn primary" type="button">テストを始める</button>
+  </section>
+
+  <!-- テスト画面(リスニング/リーディング共通) -->
+  <section id="screen-test" class="screen" hidden>
+    <div class="test-head">
+      <span id="section-label" class="section-label">リスニング</span>
+      <div id="progress-dots" class="progress-dots" aria-hidden="true"></div>
+      <span id="timer" class="timer" role="timer">4:00</span>
+    </div>
+    <div id="timer-bar" class="timer-bar"><div id="timer-fill" class="timer-fill"></div></div>
+
+    <div id="audio-panel" class="audio-panel" hidden>
+      <span id="audio-state" class="audio-state">音声を再生します…</span>
+      <button id="btn-replay" class="btn ghost small" type="button">もう一度聞く(残り1回)</button>
+    </div>
+
+    <div id="transcript" class="passage" hidden></div>
+    <div id="passage" class="passage" hidden></div>
+
+    <p id="question-no" class="question-no"></p>
+    <p id="question-text" class="question-text"></p>
+
+    <div id="options" class="options" role="group" aria-label="選択肢"></div>
+  </section>
+
+  <!-- 結果画面 -->
+  <section id="screen-result" class="screen" hidden>
+    <h1 class="result-title">推定結果</h1>
+    <p class="hero-label">合計スコア(中央値)</p>
+    <p class="hero-figure"><span id="total-median">—</span><span class="hero-unit">点</span></p>
+    <p id="total-ci" class="hero-ci"></p>
+
+    <div id="chart" class="chart-frame"></div>
+
+    <details class="table-view">
+      <summary>数値で見る</summary>
+      <table id="quantile-table">
+        <thead><tr><th scope="col">下側確率</th><th scope="col">合計スコア</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </details>
+
+    <div class="section-results">
+      <div class="section-result">
+        <div class="section-result-head">
+          <span class="section-name">リスニング</span>
+          <span id="l-summary" class="section-score"></span>
+        </div>
+        <div id="l-interval"></div>
+        <p id="l-note" class="section-note"></p>
+      </div>
+      <div class="section-result">
+        <div class="section-result-head">
+          <span class="section-name">リーディング</span>
+          <span id="r-summary" class="section-score"></span>
+        </div>
+        <div id="r-interval"></div>
+        <p id="r-note" class="section-note"></p>
+      </div>
+    </div>
+
+    <div id="result-caveats" class="caveats"></div>
+
+    <details class="review">
+      <summary>解答をふり返る</summary>
+      <ol id="review-list" class="review-list"></ol>
+    </details>
+
+    <button id="btn-retry" class="btn primary" type="button">もう一度受ける</button>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <p>このサイトは学習の目安を提供する非公式ツールで、ETSおよび国際ビジネスコミュニケーション協会(IIBC)とは関係ありません。推定値は約10分の簡易テストによるもので、実際のスコアを保証するものではありません。</p>
+    <p lang="en">TOEIC is a registered trademark of ETS. This site is not endorsed or approved by ETS.</p>
+  </div>
+</footer>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
