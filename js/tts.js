@@ -26,53 +26,83 @@ const PREFERRED_MALE = [
   'alex', 'guy', 'david', 'mark', 'daniel', 'evan', 'nathan', 'tom', 'aaron', 'oliver', 'rishi',
 ];
 
-function isNovelty(name) {
-  return NOVELTY_VOICES.some((n) =>
-    n.includes(' ') ? name.includes(n) : name.split(/[^a-z]+/).includes(n)
-  );
+// 判定は name と voiceURI を合わせた文字列で行う。Safari等ではボイス名が
+// OSの表示言語にローカライズされる(例:「サマンサ」)ため、識別子である
+// voiceURI(例: com.apple.voice.compact.en-US.Samantha)も見る。
+function matchText(voice) {
+  return `${voice.name} ${voice.voiceURI ?? ''}`.toLowerCase();
 }
 
-function genderOf(name) {
-  if (PREFERRED_FEMALE.some((p) => name.includes(p))) return 'f';
-  if (PREFERRED_MALE.some((p) => name.includes(p))) return 'm';
+// 短い名前('tom'等)が別語の一部に誤マッチしないよう単語単位で照合する
+function hasName(text, name) {
+  return name.includes(' ') ? text.includes(name) : text.split(/[^a-z]+/).includes(name);
+}
+
+function isNovelty(text) {
+  return NOVELTY_VOICES.some((n) => hasName(text, n));
+}
+
+function genderOf(text) {
+  if (PREFERRED_FEMALE.some((p) => hasName(text, p))) return 'f';
+  if (PREFERRED_MALE.some((p) => hasName(text, p))) return 'm';
   return null;
 }
 
 function voiceScore(voice) {
-  const name = voice.name.toLowerCase();
-  if (isNovelty(name)) return -100;
+  const text = matchText(voice);
+  if (isNovelty(text)) return -100;
   let score = 0;
-  const fi = PREFERRED_FEMALE.findIndex((p) => name.includes(p));
-  const mi = PREFERRED_MALE.findIndex((p) => name.includes(p));
+  const fi = PREFERRED_FEMALE.findIndex((p) => hasName(text, p));
+  const mi = PREFERRED_MALE.findIndex((p) => hasName(text, p));
   // 話者Aはまず女性ボイス群(各OSの最高品質デフォルトが多い)から探す
   const best = Math.min(fi === -1 ? 99 : fi, mi === -1 ? 99 : mi + PREFERRED_FEMALE.length);
   if (best < 99) score += 50 - best;
   if (voice.lang === 'en-US') score += 20;
   else if (voice.lang.startsWith('en')) score += 10;
-  if (/enhanced|premium|natural/.test(name)) score += 5;
+  if (/enhanced|premium|natural/.test(text)) score += 5;
   if (voice.default) score += 3;
   return score;
 }
 
 // 話者A(最高品質)と話者B(できれば別性別の品質ボイス)を選ぶ。
-// Bに使える品質ボイスがなければA と同一にする(呼び出し側がピッチで区別)。
+// Bに使える品質ボイスがなければAと同一にする(呼び出し側がピッチで区別)。
+// 英語ボイスがひとつも無い環境では null を返す。日本語等のボイスが英語を
+// 読むとカタカナ英語になり、リスニング推定として成立しないため、
+// その場合はスクリプト表示にフォールバックさせる。
 export function pickVoicePair(voices) {
   if (!voices || voices.length === 0) return null;
-  const scored = voices.map((v) => ({ v, score: voiceScore(v) }));
+  const english = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith('en'));
+  if (english.length === 0) return null;
+  const scored = english.map((v) => ({ v, score: voiceScore(v) }));
   scored.sort((a, b) => b.score - a.score);
   const A = scored[0].v;
-  const aGender = genderOf(A.name.toLowerCase());
+  const aGender = genderOf(matchText(A));
   let B = A;
   let bestB = -1;
   for (const { v, score } of scored) {
     if (v === A || score < 0) continue;
-    const g = genderOf(v.name.toLowerCase());
+    const g = genderOf(matchText(v));
     const s = score + (aGender && g && g !== aGender ? 15 : 0);
     if (s > bestB) {
       bestB = s;
       B = v;
     }
   }
+  return { A, B };
+}
+
+// 以前選んだボイスを「現在の」getVoices() リストの同一ボイスに差し替える。
+// 古いスナップショットのボイスオブジェクトを utterance.voice に渡すと、
+// 環境によっては無視されてシステム既定(日本語等)の声で読まれてしまう。
+export function resolvePair(pair, list) {
+  if (!pair || !list || list.length === 0) return null;
+  const find = (voice) =>
+    (voice.voiceURI ? list.find((v) => v.voiceURI === voice.voiceURI) : null) ??
+    list.find((v) => v.name === voice.name && v.lang === voice.lang) ??
+    null;
+  const A = find(pair.A);
+  if (!A) return null;
+  const B = (pair.B && find(pair.B)) || A;
   return { A, B };
 }
 
@@ -100,15 +130,23 @@ export function initVoices() {
   });
 }
 
-// script([{v:'A'|'B', text}])を順番に読み上げる。全行完了で resolve、
-// エラー時は reject(呼び出し側でスクリプト表示にフォールバックする)。
-export function speakScript(script, voices) {
+// script([{v:'A'|'B', text}])を順番に読み上げる。resolve時に実際に使った
+// ボイスペアを返す。英語ボイスが見つからなければ reject('no-english-voice')。
+export function speakScript(script, pair) {
   return new Promise((resolve, reject) => {
     if (!isTTSSupported()) {
       reject(new Error('speechSynthesis not supported'));
       return;
     }
     speechSynthesis.cancel();
+
+    // 読み上げ直前に最新リストから取り直す(古いボイスオブジェクト対策)
+    const fresh = speechSynthesis.getVoices();
+    const voices = resolvePair(pair, fresh) ?? pickVoicePair(fresh) ?? pair;
+    if (!voices) {
+      reject(new Error('no-english-voice'));
+      return;
+    }
 
     // 一部環境(特にモバイル)では speak() が無反応のまま止まることがある。
     // 想定読み上げ時間を大きく超えたら打ち切ってフォールバックさせる。
@@ -125,18 +163,21 @@ export function speakScript(script, voices) {
       fn();
     };
 
-    const sameVoice = !voices || voices.A === voices.B;
+    const sameVoice = voices.A === voices.B;
     let index = 0;
     const speakNext = () => {
       if (index >= script.length) {
-        settle(resolve);
+        settle(() => resolve(voices));
         return;
       }
       const line = script[index++];
       const u = new SpeechSynthesisUtterance(line.text);
-      u.lang = 'en-US';
+      const voice = voices[line.v] ?? voices.A;
+      u.voice = voice;
+      // langはボイス自身のlangに合わせる。不一致だとボイス指定が無視され、
+      // システム既定(日本語等)の声で読まれる環境があるため。
+      u.lang = voice.lang || 'en-US';
       u.rate = SPEECH_RATE;
-      if (voices) u.voice = voices[line.v] ?? voices.A;
       // 同一ボイスしかない環境では話者Bをピッチで区別する
       u.pitch = sameVoice && line.v === 'B' ? 1.3 : 1.0;
       u.onend = () => setTimeout(speakNext, 350);

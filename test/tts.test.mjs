@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pickVoicePair } from '../js/tts.js';
+import { pickVoicePair, resolvePair } from '../js/tts.js';
 
 const v = (name, lang = 'en-US', extra = {}) => ({ name, lang, default: false, ...extra });
 
@@ -44,10 +44,48 @@ test('ノベルティしかない場合でもnullにはしない', () => {
   assert.ok(pair && pair.A && pair.B);
 });
 
-test('英語ボイスがない場合は何かしら返す', () => {
+test('英語ボイスがない場合はnull(日本語ボイスの英語読みは使わない)', () => {
   const voices = [v('Kyoko', 'ja-JP'), v('Thomas', 'fr-FR')];
+  assert.equal(pickVoicePair(voices), null);
+});
+
+test('ボイス名がローカライズされていてもvoiceURIで品質/ノベルティ判定できる', () => {
+  const voices = [
+    v('アルバート', 'en-US', { voiceURI: 'com.apple.speech.synthesis.voice.Albert' }),
+    v('サマンサ', 'en-US', { voiceURI: 'com.apple.voice.compact.en-US.Samantha' }),
+  ];
   const pair = pickVoicePair(voices);
-  assert.ok(pair && pair.A);
+  assert.equal(pair.A.name, 'サマンサ');
+});
+
+test('resolvePair は最新リストの同一ボイス(voiceURI一致)に差し替える', () => {
+  const oldA = v('Samantha', 'en-US', { voiceURI: 'apple.Samantha' });
+  const oldB = v('Daniel', 'en-GB', { voiceURI: 'apple.Daniel' });
+  const freshA = v('Samantha', 'en-US', { voiceURI: 'apple.Samantha' });
+  const freshB = v('Daniel', 'en-GB', { voiceURI: 'apple.Daniel' });
+  const resolved = resolvePair({ A: oldA, B: oldB }, [freshB, freshA]);
+  assert.equal(resolved.A, freshA);
+  assert.equal(resolved.B, freshB);
+});
+
+test('resolvePair はAが最新リストに無ければnull', () => {
+  const pair = { A: v('Ghost', 'en-US', { voiceURI: 'gone' }), B: v('Daniel', 'en-GB') };
+  assert.equal(resolvePair(pair, [v('Daniel', 'en-GB')]), null);
+});
+
+test('resolvePair はBだけ消えていればBにAを使う', () => {
+  const freshA = v('Samantha', 'en-US', { voiceURI: 'apple.Samantha' });
+  const pair = {
+    A: v('Samantha', 'en-US', { voiceURI: 'apple.Samantha' }),
+    B: v('Ghost', 'en-GB', { voiceURI: 'gone' }),
+  };
+  const resolved = resolvePair(pair, [freshA]);
+  assert.equal(resolved.A, freshA);
+  assert.equal(resolved.B, freshA);
+});
+
+test('resolvePair はpairがnullならnull', () => {
+  assert.equal(resolvePair(null, [v('Samantha')]), null);
 });
 
 test('ボイスが1つならAとBは同一(呼び出し側がピッチで区別する)', () => {

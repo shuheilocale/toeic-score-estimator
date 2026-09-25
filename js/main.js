@@ -60,11 +60,13 @@ $('btn-audio-check').addEventListener('click', async () => {
   status.textContent = '再生しています…';
   try {
     state.voices = state.voices ?? (await initVoices());
-    await speakScript(
+    const used = await speakScript(
       [{ v: 'A', text: 'This is a listening check. If you can hear this voice clearly, you are ready to begin.' }],
       state.voices
     );
-    status.textContent = '聞こえていればOKです。';
+    state.voices = used;
+    const names = used.A === used.B ? used.A.name : `${used.A.name} / ${used.B.name}`;
+    status.textContent = `聞こえていればOKです。(音声: ${names})`;
     status.classList.add('ok');
   } catch {
     status.textContent = '音声を再生できませんでした。スクリプト表示で受験できます。';
@@ -169,9 +171,17 @@ async function playCurrentAudio() {
   const token = ++state.audioToken;
   const stateEl = $('audio-state');
 
-  if (!isTTSSupported() || !state.voices) {
+  if (!isTTSSupported()) {
     showTranscriptFallback();
     return;
+  }
+  if (!state.voices) {
+    state.voices = await initVoices();
+    if (token !== state.audioToken) return;
+    if (!state.voices) {
+      showTranscriptFallback();
+      return;
+    }
   }
   stateEl.textContent = '再生中…';
   stateEl.classList.add('speaking');
