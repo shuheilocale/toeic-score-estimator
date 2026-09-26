@@ -3,7 +3,7 @@
 
 import { listeningBank, readingBank, TEST_PLANS } from './items.js';
 import { createPosterior, updatePosterior } from './irt.js';
-import { selectNextItem } from './select.js';
+import { selectNextItem, listeningPool } from './select.js';
 import {
   sectionScoreDistribution,
   totalScoreDistribution,
@@ -132,13 +132,21 @@ function askNext() {
     endSection();
     return;
   }
-  const item = selectNextItem(bank, state.administered, state.posterior[sec]);
+  // リスニングは冒頭に写真描写問題(Part 1風)をクォータ分だけ出す
+  const pool =
+    sec === 'L'
+      ? listeningPool(bank, state.administered, planFor('L').photoCount ?? 0)
+      : bank;
+  const item = selectNextItem(pool, state.administered, state.posterior[sec]);
   if (!item) {
     endSection();
     return;
   }
   state.administered.add(item.id);
-  const { options, answer } = shuffleOptions(item);
+  // 写真問題は音声に選択肢の順序(A〜D)が焼き込まれているためシャッフル不可
+  const { options, answer } = item.image
+    ? { options: item.options, answer: item.answer }
+    : shuffleOptions(item);
   state.current = { item, options, answer };
   state.locked = false;
   presentItem();
@@ -156,8 +164,16 @@ function presentItem() {
   passageEl.hidden = item.passage === undefined;
   if (item.passage !== undefined) passageEl.textContent = item.passage;
 
+  const isPhoto = Boolean(item.image);
+  const photoPanel = $('photo-panel');
+  photoPanel.hidden = !isPhoto;
+  if (isPhoto) $('photo-img').src = item.image;
+  $('photo-hint').hidden = !isPhoto;
+
+  // 写真問題は本物のPart 1と同様に選択肢の英文を表示せず、A〜Dのマークだけ置く
   const optionsEl = $('options');
   optionsEl.textContent = '';
+  optionsEl.classList.toggle('photo-row', isPhoto);
   options.forEach((text, i) => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -165,9 +181,14 @@ function presentItem() {
     const bubble = document.createElement('span');
     bubble.className = 'bubble';
     bubble.textContent = LETTERS[i];
-    const label = document.createElement('span');
-    label.textContent = text;
-    btn.append(bubble, label);
+    btn.append(bubble);
+    if (isPhoto) {
+      btn.setAttribute('aria-label', `選択肢${LETTERS[i]}`);
+    } else {
+      const label = document.createElement('span');
+      label.textContent = text;
+      btn.append(label);
+    }
     btn.addEventListener('click', () => onAnswer(i, btn));
     optionsEl.append(btn);
   });
@@ -261,7 +282,9 @@ function showTranscriptFallback() {
 }
 
 function formatScript(script) {
-  if (script.length === 1) return script[0].text;
+  // 話者が1人だけなら M:/W: の接頭辞は付けない(アナウンス・写真問題)
+  const speakers = new Set(script.map((l) => l.v));
+  if (speakers.size < 2) return script.map((l) => l.text).join('\n');
   return script.map((line) => `${line.v}: ${line.text}`).join('\n');
 }
 
@@ -446,6 +469,14 @@ function renderReview() {
     head.append(q);
     li.append(head);
 
+    if (r.item.image) {
+      const img = document.createElement('img');
+      img.className = 'review-photo';
+      img.src = r.item.image;
+      img.alt = '写真描写問題の写真';
+      img.loading = 'lazy';
+      li.append(img);
+    }
     if (r.item.script) {
       const script = document.createElement('p');
       script.className = 'review-en review-note';

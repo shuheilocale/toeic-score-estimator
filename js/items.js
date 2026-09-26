@@ -8,19 +8,105 @@ export const TEST_PLANS = {
     key: 'standard',
     label: '標準',
     minutes: 10,
-    listening: { count: 8, timeLimitSec: 240 },
+    listening: { count: 8, timeLimitSec: 240, photoCount: 1 },
     reading: { count: 12, timeLimitSec: 360 },
   },
   thorough: {
     key: 'thorough',
     label: '精密',
     minutes: 15,
-    listening: { count: 12, timeLimitSec: 360 },
+    listening: { count: 12, timeLimitSec: 360, photoCount: 2 },
     reading: { count: 18, timeLimitSec: 540 },
   },
 };
 
+// 写真描写問題(Part 1風)。4つの英文は音声のみで、画面には表示しない。
+// script の各行は「A. 〜」の形で options と完全一致させる(テストで強制)。
+// 音声に選択肢の順序が焼き込まれるため、この問題型だけ表示シャッフルしない。
+const photoStatements = (options) =>
+  options.map((text, i) => `${'ABCD'[i]}. ${text}`);
+
+const photoItem = ({ id, a, b, narrator, options, answer, jaNote }) => ({
+  id, a, b, c: 0.25,
+  image: `images/${id}.jpg`,
+  script: photoStatements(options).map((text) => ({ v: narrator, text })),
+  question: 'Which statement best describes the picture?',
+  options,
+  answer,
+  jaNote,
+});
+
+const photoBank = [
+  photoItem({
+    id: 'P01', a: 1.1, b: -2.3, narrator: 'M',
+    options: [
+      'She is talking on the phone.',
+      'She is reading a book.',
+      'She is riding a bicycle.',
+      'She is watering some plants.',
+    ],
+    answer: 1,
+    jaNote: 'ベンチで本を読んでいる女性の写真。動作は「reading a book」です。',
+  }),
+  photoItem({
+    id: 'P02', a: 1.0, b: -1.8, narrator: 'W',
+    options: [
+      'He is cutting the grass.',
+      'He is planting a tree.',
+      'He is watering some plants.',
+      'He is raking some leaves.',
+    ],
+    answer: 2,
+    jaNote: 'じょうろで植物に水をやっている男性。「watering(水やり)」が正解。',
+  }),
+  photoItem({
+    id: 'P03', a: 1.2, b: -1.2, narrator: 'M',
+    options: [
+      'The people are shaking hands.',
+      'The people are looking out the window.',
+      'One of the people is answering the phone.',
+      'They are moving a desk.',
+    ],
+    answer: 0,
+    jaNote: 'オフィスで握手している2人。「shaking hands」が正解。',
+  }),
+  photoItem({
+    id: 'P04', a: 1.2, b: -0.6, narrator: 'W',
+    options: [
+      'She is pouring some coffee.',
+      'She is wiping the table.',
+      'She is closing her laptop.',
+      'She is using a laptop.',
+    ],
+    answer: 3,
+    jaNote: 'カフェでノートPCを使う女性。コーヒーは置いてあるだけで注いではいない(ひっかけ)。',
+  }),
+  photoItem({
+    id: 'P05', a: 1.3, b: 0.0, narrator: 'M',
+    options: [
+      'Some boxes are being loaded onto a truck.',
+      'The man is stacking some boxes.',
+      'The shelves are empty.',
+      'The man is sealing a box with tape.',
+    ],
+    answer: 1,
+    jaNote: '倉庫で箱を積み上げている男性。トラックやテープは写っていません。',
+  }),
+  photoItem({
+    id: 'P06', a: 1.3, b: 0.6, narrator: 'W',
+    options: [
+      'People are seated around the table.',
+      'The chairs are being moved.',
+      'Chairs have been arranged around a table.',
+      'The table is covered with documents.',
+    ],
+    answer: 2,
+    jaNote: '無人の会議室。人がいないので現在完了の状態描写「have been arranged」が正解(Part 1頻出パターン)。',
+  }),
+];
+
 export const listeningBank = [
+  ...photoBank,
   {
     id: 'L01', a: 1.1, b: -2.2, c: 0.25,
     script: [{ v: 'M', text: 'The meeting will start at three o\'clock in Room B.' }],

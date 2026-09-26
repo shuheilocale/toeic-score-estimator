@@ -15,7 +15,11 @@ GitHub Pages でそのまま公開できます(ビルド不要)。
 - **リスニング音声**: Gemini TTSで事前生成したニューラル音声(`audio/*.m4a`、
   女声W=Kore / 男声M=Charon)を再生。ファイルが無い環境では Web Speech API、
   それも不可ならスクリプト表示に自動フォールバック。
-- **アイテムバンク**: リスニング20問・リーディング37問(穴埋め+読解・広告)。
+- **写真描写問題(Part 1風)**: リスニング冒頭に出題(標準1問/精密2問)。
+  写真はGemini画像生成+vision検証ループ(正解文だけが真の描写であることを
+  機械検証してから採用)。本物同様、選択肢の英文は音声のみで画面に出さない。
+- **アイテムバンク**: リスニング26問(うち写真6問)・リーディング37問
+  (穴埋め+読解・広告)。
 
 ## 開発
 
@@ -36,6 +40,18 @@ GEMINI_API_KEY=... node tools/generate-audio.mjs L21    # 指定IDのみ
 
 話者ラベルは性別固定(`W`=女声 / `M`=男声)。問題文が the man / the woman に
 言及する場合、対応する話者がスクリプトに必要(テストで検査)。
+
+### 写真描写問題の画像の再生成
+
+写真項目(`P01`〜)を追加・変更したら、`tools/generate-images.mjs` の `SCENES` に
+シーン指示を書いて実行する(テストが `images/<id>.jpg` の存在を検査する)。
+生成画像はGemini visionで「正解文だけが真の描写か」を自動検証し、
+落ちたら再生成する。
+
+```sh
+GEMINI_API_KEY=... node tools/generate-images.mjs        # 全件
+GEMINI_API_KEY=... node tools/generate-images.mjs P07    # 指定IDのみ
+```
 
 ## 公開手順(GitHub Pages)
 

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createPosterior, updatePosterior } from '../js/irt.js';
-import { selectNextItem } from '../js/select.js';
+import { selectNextItem, listeningPool } from '../js/select.js';
 
 const bank = [
   { id: 'e1', a: 1.2, b: -2.0, c: 0.25 },
@@ -61,4 +61,32 @@ test('残りが3件未満でもエラーにならない', () => {
   const administered = new Set(['e1', 'e2', 'm1', 'm2', 'h1']);
   const picked = selectNextItem(bank, administered, post, () => 0.99);
   assert.equal(picked.id, 'h2');
+});
+
+const mixedBank = [
+  { id: 'p1', image: 'images/p1.jpg', a: 1.0, b: -2.0, c: 0.25 },
+  { id: 'p2', image: 'images/p2.jpg', a: 1.0, b: -1.5, c: 0.25 },
+  { id: 'n1', a: 1.0, b: 0.0, c: 0.25 },
+  { id: 'n2', a: 1.0, b: 0.5, c: 0.25 },
+];
+
+test('写真クォータが残っていれば写真問題だけが候補になる', () => {
+  const pool = listeningPool(mixedBank, new Set(), 1);
+  assert.deepEqual(pool.map((i) => i.id).sort(), ['p1', 'p2']);
+});
+
+test('クォータ消化後は通常問題だけが候補になる', () => {
+  const pool = listeningPool(mixedBank, new Set(['p1']), 1);
+  assert.deepEqual(pool.map((i) => i.id).sort(), ['n1', 'n2']);
+});
+
+test('クォータ0なら最初から通常問題だけが候補になる', () => {
+  const pool = listeningPool(mixedBank, new Set(), 0);
+  assert.deepEqual(pool.map((i) => i.id).sort(), ['n1', 'n2']);
+});
+
+test('候補が空になる場合は全バンクにフォールバックする', () => {
+  const noPhotos = [{ id: 'n1', a: 1, b: 0, c: 0.25 }];
+  const pool = listeningPool(noPhotos, new Set(), 1);
+  assert.deepEqual(pool.map((i) => i.id), ['n1']);
 });

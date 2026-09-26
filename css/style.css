@@ -298,6 +298,39 @@ button {
   line-height: 1.75;
 }
 
+.photo-panel {
+  margin: 0 0 20px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.photo-panel img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.photo-hint { margin: -14px 0 20px; }
+
+.options.photo-row {
+  flex-direction: row;
+  justify-content: center;
+  gap: 14px;
+}
+.options.photo-row .option {
+  width: auto;
+  padding: 14px 18px;
+}
+
+.review-photo {
+  display: block;
+  max-width: 280px;
+  width: 100%;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  margin: 6px 0;
+}
+
 .question-no {
   font-size: 0.8rem;
   color: var(--muted);

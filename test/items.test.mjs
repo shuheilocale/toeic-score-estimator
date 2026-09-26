@@ -90,6 +90,44 @@ test('全リスニング項目に事前生成音声(audio/<id>.m4a)がある', (
   assert.ok(existsSync(check), 'audio/check.m4a がない');
 });
 
+const photoItems = listeningBank.filter((i) => i.image);
+
+test('写真問題: 画像パス・単一ナレーター・読み上げ文が選択肢と一致', () => {
+  assert.ok(photoItems.length >= 4, '写真問題が少なすぎる');
+  const letters = ['A', 'B', 'C', 'D'];
+  for (const it of photoItems) {
+    assert.equal(it.image, `images/${it.id}.jpg`, it.id);
+    assert.equal(it.script.length, 4, it.id);
+    assert.equal(new Set(it.script.map((l) => l.v)).size, 1, `${it.id}: ナレーターは1人`);
+    // 音声は「A. 〜」の形で選択肢と完全一致(表示シャッフル不可の根拠)
+    it.script.forEach((l, i) => {
+      assert.equal(l.text, `${letters[i]}. ${it.options[i]}`, `${it.id} 文${i}`);
+    });
+  }
+});
+
+test('写真問題の正解位置は分散している', () => {
+  const answers = new Set(photoItems.map((i) => i.answer));
+  assert.ok(answers.size >= 3, `正解位置が偏っている: ${[...answers]}`);
+});
+
+test('各プランのphotoCountに対して写真バンクが足りる', () => {
+  for (const plan of Object.values(TEST_PLANS)) {
+    assert.ok(Number.isInteger(plan.listening.photoCount), plan.label);
+    assert.ok(photoItems.length >= plan.listening.photoCount + 2, plan.label);
+    assert.ok(plan.listening.photoCount < plan.listening.count, plan.label);
+  }
+});
+
+test('写真問題の画像ファイル(images/<id>.jpg)が存在する', () => {
+  // 画像を追加・変更したら tools/generate-images.mjs で生成すること
+  for (const it of photoItems) {
+    const path = new URL(`../${it.image}`, import.meta.url).pathname;
+    assert.ok(existsSync(path), `${it.id}: ${it.image} がない`);
+    assert.ok(statSync(path).size > 20000, `${it.id}: 画像が小さすぎる`);
+  }
+});
+
 test('全問題に日本語の解説がある', () => {
   for (const it of allItems) {
     assert.ok(typeof it.jaNote === 'string' && it.jaNote.length > 0, it.id);
