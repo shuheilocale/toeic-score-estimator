@@ -307,7 +307,13 @@ button {
   padding: 12px 16px;
   margin-bottom: 20px;
 }
-.audio-state { font-size: 0.9rem; color: var(--ink-2); }
+.audio-state {
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  flex: 1;              /* 中央領域を占めて左寄せにする(space-betweenで右に流れない) */
+  min-width: 60%;
+  text-align: left;
+}
 .audio-state.speaking { color: var(--accent-deep); font-weight: 600; }
 
 /* 再生前の準備時間: パネルを強調し、カウントダウンの丸数字を出す */
