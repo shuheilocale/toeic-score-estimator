@@ -64,8 +64,11 @@ function voiceScore(voice) {
   return score;
 }
 
-// 話者A(最高品質)と話者B(できれば別性別の品質ボイス)を選ぶ。
-// Bに使える品質ボイスがなければAと同一にする(呼び出し側がピッチで区別)。
+// 女性話者W・男性話者Mのボイスペアを選ぶ。問題文の「the woman / the man」と
+// 聞こえる声の性別を一致させるため、ラベルは性別で固定する。
+// - W: 女声として知られる品質ボイス。なければ最高スコアのボイス。
+// - M: 男声として知られる品質ボイス。なければ性別不明の品質ボイス、
+//      それも無ければWと同一(読み上げ側がピッチを下げて区別する)。
 // 英語ボイスがひとつも無い環境では null を返す。日本語等のボイスが英語を
 // 読むとカタカナ英語になり、リスニング推定として成立しないため、
 // その場合はスクリプト表示にフォールバックさせる。
@@ -73,22 +76,16 @@ export function pickVoicePair(voices) {
   if (!voices || voices.length === 0) return null;
   const english = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith('en'));
   if (english.length === 0) return null;
-  const scored = english.map((v) => ({ v, score: voiceScore(v) }));
-  scored.sort((a, b) => b.score - a.score);
-  const A = scored[0].v;
-  const aGender = genderOf(matchText(A));
-  let B = A;
-  let bestB = -1;
-  for (const { v, score } of scored) {
-    if (v === A || score < 0) continue;
-    const g = genderOf(matchText(v));
-    const s = score + (aGender && g && g !== aGender ? 15 : 0);
-    if (s > bestB) {
-      bestB = s;
-      B = v;
-    }
-  }
-  return { A, B };
+  const scored = english
+    .map((v) => ({ v, score: voiceScore(v), gender: genderOf(matchText(v)) }))
+    .sort((a, b) => b.score - a.score);
+  const W = (scored.find((s) => s.gender === 'f') ?? scored[0]).v;
+  const M = (
+    scored.find((s) => s.gender === 'm' && s.v !== W) ??
+    scored.find((s) => s.gender === null && s.score >= 0 && s.v !== W) ??
+    { v: W }
+  ).v;
+  return { W, M };
 }
 
 // 以前選んだボイスを「現在の」getVoices() リストの同一ボイスに差し替える。
@@ -100,10 +97,10 @@ export function resolvePair(pair, list) {
     (voice.voiceURI ? list.find((v) => v.voiceURI === voice.voiceURI) : null) ??
     list.find((v) => v.name === voice.name && v.lang === voice.lang) ??
     null;
-  const A = find(pair.A);
-  if (!A) return null;
-  const B = (pair.B && find(pair.B)) || A;
-  return { A, B };
+  const W = find(pair.W);
+  if (!W) return null;
+  const M = (pair.M && find(pair.M)) || W;
+  return { W, M };
 }
 
 // ボイス一覧は非同期に読み込まれるため、voiceschanged を待つ。
@@ -163,7 +160,9 @@ export function speakScript(script, pair) {
       fn();
     };
 
-    const sameVoice = voices.A === voices.B;
+    // Mに男声を割り当てられなかった環境では、M話者の行だけピッチを下げて
+    // 聞き分けられるようにする
+    const mNeedsPitchDown = genderOf(matchText(voices.M)) !== 'm';
     let index = 0;
     const speakNext = () => {
       if (index >= script.length) {
@@ -172,14 +171,13 @@ export function speakScript(script, pair) {
       }
       const line = script[index++];
       const u = new SpeechSynthesisUtterance(line.text);
-      const voice = voices[line.v] ?? voices.A;
+      const voice = line.v === 'M' ? voices.M : voices.W;
       u.voice = voice;
       // langはボイス自身のlangに合わせる。不一致だとボイス指定が無視され、
       // システム既定(日本語等)の声で読まれる環境があるため。
       u.lang = voice.lang || 'en-US';
       u.rate = SPEECH_RATE;
-      // 同一ボイスしかない環境では話者Bをピッチで区別する
-      u.pitch = sameVoice && line.v === 'B' ? 1.3 : 1.0;
+      u.pitch = line.v === 'M' && mNeedsPitchDown ? 0.8 : 1.0;
       u.onend = () => setTimeout(speakNext, 350);
       u.onerror = (e) => {
         if (e.error === 'interrupted' || e.error === 'canceled') {

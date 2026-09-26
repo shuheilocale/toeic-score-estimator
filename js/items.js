@@ -2,15 +2,28 @@
 // TOEICレベル帯を想定した仮設定であり、実測校正値ではない。
 // script の v は話者(A/B)。TTSで声を切り替える。
 
-export const TEST_PLAN = {
-  listening: { count: 8, timeLimitSec: 240 },
-  reading: { count: 12, timeLimitSec: 360 },
+// テスト長プラン。問題数が多いほどθ事後分布が絞れて推定区間が狭くなる。
+export const TEST_PLANS = {
+  standard: {
+    key: 'standard',
+    label: '標準',
+    minutes: 10,
+    listening: { count: 8, timeLimitSec: 240 },
+    reading: { count: 12, timeLimitSec: 360 },
+  },
+  thorough: {
+    key: 'thorough',
+    label: '精密',
+    minutes: 15,
+    listening: { count: 12, timeLimitSec: 360 },
+    reading: { count: 18, timeLimitSec: 540 },
+  },
 };
 
 export const listeningBank = [
   {
     id: 'L01', a: 1.1, b: -2.2, c: 0.25,
-    script: [{ v: 'A', text: 'The meeting will start at three o\'clock in Room B.' }],
+    script: [{ v: 'M', text: 'The meeting will start at three o\'clock in Room B.' }],
     question: 'What time will the meeting start?',
     options: ['At 1:00', 'At 2:00', 'At 3:00', 'At 4:00'],
     answer: 2,
@@ -19,8 +32,8 @@ export const listeningBank = [
   {
     id: 'L02', a: 1.0, b: -1.9, c: 0.25,
     script: [
-      { v: 'B', text: 'Excuse me, where is the nearest post office?' },
-      { v: 'A', text: 'It\'s across the street, next to the bank.' },
+      { v: 'W', text: 'Excuse me, where is the nearest post office?' },
+      { v: 'M', text: 'It\'s across the street, next to the bank.' },
     ],
     question: 'Where is the post office?',
     options: ['Inside the station', 'Next to the bank', 'Behind the school', 'On the second floor'],
@@ -29,7 +42,7 @@ export const listeningBank = [
   },
   {
     id: 'L03', a: 1.2, b: -1.6, c: 0.25,
-    script: [{ v: 'A', text: 'Attention, shoppers. The store will close in fifteen minutes. Please bring your items to the register.' }],
+    script: [{ v: 'W', text: 'Attention, shoppers. The store will close in fifteen minutes. Please bring your items to the register.' }],
     question: 'What is being announced?',
     options: ['A new product sale', 'The store is closing soon', 'A lost child', 'Free samples at the entrance'],
     answer: 1,
@@ -38,8 +51,8 @@ export const listeningBank = [
   {
     id: 'L04', a: 1.1, b: -1.4, c: 0.25,
     script: [
-      { v: 'A', text: 'Could you send me the sales report by Friday?' },
-      { v: 'B', text: 'Sure. I\'ll email it to you tomorrow morning.' },
+      { v: 'M', text: 'Could you send me the sales report by Friday?' },
+      { v: 'W', text: 'Sure. I\'ll email it to you tomorrow morning.' },
     ],
     question: 'What will the woman do?',
     options: ['Print the report', 'Email the report', 'Cancel the meeting', 'Call the client'],
@@ -48,7 +61,7 @@ export const listeningBank = [
   },
   {
     id: 'L05', a: 1.2, b: -1.2, c: 0.25,
-    script: [{ v: 'A', text: 'Flight three-oh-two to Chicago has been delayed due to heavy snow. It will now depart at six thirty p.m.' }],
+    script: [{ v: 'M', text: 'Flight three-oh-two to Chicago has been delayed due to heavy snow. It will now depart at six thirty p.m.' }],
     question: 'Why has the flight been delayed?',
     options: ['Because of bad weather', 'Because of a mechanical problem', 'Because of a crew shortage', 'Because of airport construction'],
     answer: 0,
@@ -57,8 +70,8 @@ export const listeningBank = [
   {
     id: 'L06', a: 1.3, b: -1.0, c: 0.25,
     script: [
-      { v: 'B', text: 'Do you want to grab lunch at the new Italian place?' },
-      { v: 'A', text: 'I\'d love to, but I have a meeting until one. Can we go after that?' },
+      { v: 'W', text: 'Do you want to grab lunch at the new Italian place?' },
+      { v: 'M', text: 'I\'d love to, but I have a meeting until one. Can we go after that?' },
     ],
     question: 'Why can\'t the man go to lunch now?',
     options: ['He is not hungry', 'He has a meeting', 'He brought his own lunch', 'The restaurant is closed'],
@@ -67,7 +80,7 @@ export const listeningBank = [
   },
   {
     id: 'L07', a: 1.0, b: -0.8, c: 0.25,
-    script: [{ v: 'A', text: 'Thank you for calling Baxter Dental Clinic. Our office is open Monday through Friday, from nine a.m. to five p.m. To make an appointment, please press one.' }],
+    script: [{ v: 'W', text: 'Thank you for calling Baxter Dental Clinic. Our office is open Monday through Friday, from nine a.m. to five p.m. To make an appointment, please press one.' }],
     question: 'What kind of business is this?',
     options: ['A hair salon', 'A law firm', 'A dental clinic', 'A travel agency'],
     answer: 2,
@@ -76,8 +89,8 @@ export const listeningBank = [
   {
     id: 'L08', a: 1.2, b: -0.6, c: 0.25,
     script: [
-      { v: 'A', text: 'The printer on the second floor is out of order again.' },
-      { v: 'B', text: 'I know. A technician is coming this afternoon. Until then, you can use the one near the elevator.' },
+      { v: 'M', text: 'The printer on the second floor is out of order again.' },
+      { v: 'W', text: 'I know. A technician is coming this afternoon. Until then, you can use the one near the elevator.' },
     ],
     question: 'What does the woman suggest the man do?',
     options: ['Repair the printer himself', 'Use a different printer', 'Call the technician', 'Work on another floor'],
@@ -86,7 +99,7 @@ export const listeningBank = [
   },
   {
     id: 'L09', a: 1.3, b: -0.4, c: 0.25,
-    script: [{ v: 'A', text: 'Good morning, everyone. Before we open, I\'d like to remind you that the summer sale begins today. All clothing items are twenty percent off, and shoes are thirty percent off.' }],
+    script: [{ v: 'M', text: 'Good morning, everyone. Before we open, I\'d like to remind you that the summer sale begins today. All clothing items are twenty percent off, and shoes are thirty percent off.' }],
     question: 'What discount is offered on shoes?',
     options: ['Ten percent', 'Twenty percent', 'Thirty percent', 'Forty percent'],
     answer: 2,
@@ -95,8 +108,8 @@ export const listeningBank = [
   {
     id: 'L10', a: 1.1, b: -0.2, c: 0.25,
     script: [
-      { v: 'B', text: 'Have you finished reviewing the budget proposal?' },
-      { v: 'A', text: 'Almost. I just need to check the travel expenses. I should be done by the end of the day.' },
+      { v: 'W', text: 'Have you finished reviewing the budget proposal?' },
+      { v: 'M', text: 'Almost. I just need to check the travel expenses. I should be done by the end of the day.' },
     ],
     question: 'What does the man still need to do?',
     options: ['Approve the budget', 'Check the travel expenses', 'Book a business trip', 'Meet the accounting team'],
@@ -106,8 +119,8 @@ export const listeningBank = [
   {
     id: 'L11', a: 1.3, b: 0.0, c: 0.25,
     script: [
-      { v: 'A', text: 'I heard the marketing position has finally been filled.' },
-      { v: 'B', text: 'Yes, the new hire starts next Monday. She has over ten years of experience in digital advertising.' },
+      { v: 'M', text: 'I heard the marketing position has finally been filled.' },
+      { v: 'W', text: 'Yes, the new hire starts next Monday. She has over ten years of experience in digital advertising.' },
     ],
     question: 'What is mentioned about the new employee?',
     options: ['She used to work for a competitor', 'She has experience in digital advertising', 'She will manage the sales team', 'She requested a later start date'],
@@ -116,7 +129,7 @@ export const listeningBank = [
   },
   {
     id: 'L12', a: 1.2, b: 0.2, c: 0.25,
-    script: [{ v: 'A', text: 'Due to scheduled maintenance, the parking garage on Fifth Avenue will be closed this weekend. Employees are encouraged to use public transportation or the lot on Oak Street.' }],
+    script: [{ v: 'W', text: 'Due to scheduled maintenance, the parking garage on Fifth Avenue will be closed this weekend. Employees are encouraged to use public transportation or the lot on Oak Street.' }],
     question: 'What are employees encouraged to do?',
     options: ['Work from home this weekend', 'Park on Fifth Avenue', 'Use public transportation or another lot', 'Postpone weekend shifts'],
     answer: 2,
@@ -125,8 +138,8 @@ export const listeningBank = [
   {
     id: 'L13', a: 1.4, b: 0.4, c: 0.25,
     script: [
-      { v: 'B', text: 'The quarterly figures look better than expected.' },
-      { v: 'A', text: 'True, but most of the growth came from overseas markets. Domestic sales were actually flat.' },
+      { v: 'W', text: 'The quarterly figures look better than expected.' },
+      { v: 'M', text: 'True, but most of the growth came from overseas markets. Domestic sales were actually flat.' },
     ],
     question: 'What does the man imply?',
     options: ['The figures contain an error', 'Overseas offices will be expanded', 'Domestic sales did not grow', 'The next quarter will be worse'],
@@ -135,7 +148,7 @@ export const listeningBank = [
   },
   {
     id: 'L14', a: 1.2, b: 0.6, c: 0.25,
-    script: [{ v: 'A', text: 'Welcome to today\'s workshop on time management. We\'ll begin with a short self-assessment, followed by group exercises. Please note that the handouts will be available online after the session, so there\'s no need to take detailed notes.' }],
+    script: [{ v: 'M', text: 'Welcome to today\'s workshop on time management. We\'ll begin with a short self-assessment, followed by group exercises. Please note that the handouts will be available online after the session, so there\'s no need to take detailed notes.' }],
     question: 'Why is there no need to take detailed notes?',
     options: ['The session will be recorded', 'Materials will be posted online', 'Assistants will take notes', 'The content is in the textbook'],
     answer: 1,
@@ -144,8 +157,8 @@ export const listeningBank = [
   {
     id: 'L15', a: 1.3, b: 0.9, c: 0.25,
     script: [
-      { v: 'A', text: 'Weren\'t you supposed to be at the client presentation this morning?' },
-      { v: 'B', text: 'It was pushed back to Thursday. The client had a scheduling conflict.' },
+      { v: 'M', text: 'Weren\'t you supposed to be at the client presentation this morning?' },
+      { v: 'W', text: 'It was pushed back to Thursday. The client had a scheduling conflict.' },
     ],
     question: 'What happened to the presentation?',
     options: ['It was canceled entirely', 'It was moved to another day', 'It was given by someone else', 'It was held online instead'],
@@ -154,7 +167,7 @@ export const listeningBank = [
   },
   {
     id: 'L16', a: 1.2, b: 1.2, c: 0.25,
-    script: [{ v: 'A', text: 'Before we wrap up, a quick note about travel reimbursements. Starting next month, all expense reports must be submitted within two weeks of your return, and receipts under twenty-five dollars will no longer be required.' }],
+    script: [{ v: 'W', text: 'Before we wrap up, a quick note about travel reimbursements. Starting next month, all expense reports must be submitted within two weeks of your return, and receipts under twenty-five dollars will no longer be required.' }],
     question: 'According to the speaker, what will no longer be necessary?',
     options: ['Submitting expense reports', 'Getting a manager\'s approval', 'Attaching small receipts', 'Booking through the travel desk'],
     answer: 2,
@@ -163,9 +176,9 @@ export const listeningBank = [
   {
     id: 'L17', a: 1.4, b: 1.5, c: 0.25,
     script: [
-      { v: 'B', text: 'The venue we booked for the conference just called. They\'re double-booked on the fifteenth.' },
-      { v: 'A', text: 'You\'re kidding. Invitations went out last week. Changing the date now would look unprofessional.' },
-      { v: 'B', text: 'Then let\'s ask about their sister property downtown.' },
+      { v: 'W', text: 'The venue we booked for the conference just called. They\'re double-booked on the fifteenth.' },
+      { v: 'M', text: 'You\'re kidding. Invitations went out last week. Changing the date now would look unprofessional.' },
+      { v: 'W', text: 'Then let\'s ask about their sister property downtown.' },
     ],
     question: 'What does the woman suggest?',
     options: ['Postponing the conference', 'Holding the event at a different location', 'Sending new invitations', 'Canceling the venue contract'],
@@ -174,7 +187,7 @@ export const listeningBank = [
   },
   {
     id: 'L18', a: 1.3, b: 1.8, c: 0.25,
-    script: [{ v: 'A', text: 'Our customer satisfaction scores dipped slightly last quarter, but I wouldn\'t read too much into it. The survey methodology changed in June, and the new scale tends to produce lower numbers across the board. That said, the complaints about response time are worth taking seriously.' }],
+    script: [{ v: 'M', text: 'Our customer satisfaction scores dipped slightly last quarter, but I wouldn\'t read too much into it. The survey methodology changed in June, and the new scale tends to produce lower numbers across the board. That said, the complaints about response time are worth taking seriously.' }],
     question: 'What does the speaker imply about the lower scores?',
     options: ['They reflect worsening service quality', 'They are largely due to a change in the survey method', 'They were caused by slower response times', 'They should be reported to management'],
     answer: 1,
@@ -183,8 +196,8 @@ export const listeningBank = [
   {
     id: 'L19', a: 1.3, b: 2.1, c: 0.25,
     script: [
-      { v: 'A', text: 'If the shipment doesn\'t clear customs by Friday, we\'ll have to airfreight the replacement parts at our own expense.' },
-      { v: 'B', text: 'Which would wipe out the margin on the entire order. Let\'s get the customs broker on the phone before we commit to anything.' },
+      { v: 'M', text: 'If the shipment doesn\'t clear customs by Friday, we\'ll have to airfreight the replacement parts at our own expense.' },
+      { v: 'W', text: 'Which would wipe out the margin on the entire order. Let\'s get the customs broker on the phone before we commit to anything.' },
     ],
     question: 'What is the woman concerned about?',
     options: ['Missing a customs deadline', 'Losing the profit on the order', 'Damaging the replacement parts', 'Switching to a new supplier'],
@@ -193,7 +206,7 @@ export const listeningBank = [
   },
   {
     id: 'L20', a: 1.2, b: 2.4, c: 0.25,
-    script: [{ v: 'A', text: 'Thank you all for coming on short notice. As you may have heard, the merger announcement has been moved up to next Tuesday, which means the press kits need to be finalized by Friday at the latest. Legal still hasn\'t signed off on the FAQ document, so until they do, treat every figure in it as provisional and don\'t share anything externally.' }],
+    script: [{ v: 'W', text: 'Thank you all for coming on short notice. As you may have heard, the merger announcement has been moved up to next Tuesday, which means the press kits need to be finalized by Friday at the latest. Legal still hasn\'t signed off on the FAQ document, so until they do, treat every figure in it as provisional and don\'t share anything externally.' }],
     question: 'What does the speaker warn listeners not to do?',
     options: ['Miss the Friday deadline', 'Contact the legal department', 'Share information outside the company', 'Attend the press conference'],
     answer: 2,
@@ -443,5 +456,29 @@ export const readingBank = [
     options: ['Raising salaries across the board', 'Conducting more exit interviews', 'Launching an internal mobility program', 'Benchmarking against industry turnover'],
     answer: 2,
     jaNote: '「recommends piloting an internal mobility program before revisiting the salary structure」→ 給与見直しの前に社内異動プログラムを試行。',
+  },
+  {
+    id: 'RP5', a: 1.1, b: -0.8, c: 0.25,
+    passage: 'SPRING SALE at Delmar Shoes!\n\nAll sneakers 25% off from March 1 to March 7. Members receive an additional 10% discount at the register. Open daily, 10 A.M. to 8 P.M.',
+    question: 'How long will the sale last?',
+    options: ['Three days', 'One week', 'Two weeks', 'One month'],
+    answer: 1,
+    jaNote: '「from March 1 to March 7」= 7日間 = 1週間です。',
+  },
+  {
+    id: 'RP6', a: 1.2, b: 0.6, c: 0.25,
+    passage: 'NOW HIRING — Part-Time Café Staff\n\nRiver Bean Café is looking for friendly part-time staff for weekend shifts. No experience necessary — full training provided. Free drinks during shifts. Apply in person at 22 Harbor Street or online at riverbean.example.com.',
+    question: 'What is indicated about the position?',
+    options: ['It requires previous experience', 'It is a full-time role', 'Training will be provided', 'It is limited to weekday shifts'],
+    answer: 2,
+    jaNote: '「No experience necessary — full training provided」= 経験不問で研修あり。',
+  },
+  {
+    id: 'RP7', a: 1.3, b: 1.4, c: 0.25,
+    passage: 'GreenBox Meal Kits — Fresh ingredients, delivered weekly.\n\nNew subscribers who sign up by June 30 receive their first two boxes at half price. Skip a week or cancel anytime. Please note that this promotion cannot be combined with any other offer and applies to standard plans only.',
+    question: 'What is true about the promotional discount?',
+    options: ['It applies to all subscription plans', 'It requires a one-year commitment', 'It cannot be used with other offers', 'It covers the first four deliveries'],
+    answer: 2,
+    jaNote: '「cannot be combined with any other offer(他の特典との併用不可)」と明記されています。',
   },
 ];

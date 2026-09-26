@@ -1,7 +1,7 @@
 // 画面フロー: start → listening → reading → result
 // 回答のたびにθの事後分布を更新し、情報量最大の問題を適応的に出題する。
 
-import { listeningBank, readingBank, TEST_PLAN } from './items.js';
+import { listeningBank, readingBank, TEST_PLANS } from './items.js';
 import { createPosterior, updatePosterior } from './irt.js';
 import { selectNextItem } from './select.js';
 import {
@@ -20,11 +20,16 @@ const LOW_TIME_SEC = 30;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const SECTIONS = {
-  L: { name: 'リスニング', bank: listeningBank, plan: TEST_PLAN.listening },
-  R: { name: 'リーディング', bank: readingBank, plan: TEST_PLAN.reading },
+  L: { name: 'リスニング', bank: listeningBank },
+  R: { name: 'リーディング', bank: readingBank },
 };
 
+function planFor(sec) {
+  return sec === 'L' ? state.plan.listening : state.plan.reading;
+}
+
 const state = {
+  plan: TEST_PLANS.standard,
   section: null,
   posterior: { L: createPosterior(), R: createPosterior() },
   administered: new Set(),
@@ -52,20 +57,31 @@ function showScreen(id) {
 $('btn-audio-check').addEventListener('click', async () => {
   const status = $('audio-check-status');
   status.className = 'audio-status';
+  status.textContent = '再生しています…';
+
+  // まず事前生成音声(ニューラルTTS)を試す
+  try {
+    await playAudioFile('audio/check.m4a');
+    status.textContent = '聞こえていればOKです。(高品質音声)';
+    status.classList.add('ok');
+    return;
+  } catch {
+    // ファイルが無い/再生できない場合はブラウザ読み上げへ
+  }
+
   if (!isTTSSupported()) {
     status.textContent = 'このブラウザは音声に対応していません。スクリプト表示で受験できます。';
     status.classList.add('ng');
     return;
   }
-  status.textContent = '再生しています…';
   try {
     state.voices = state.voices ?? (await initVoices());
     const used = await speakScript(
-      [{ v: 'A', text: 'This is a listening check. If you can hear this voice clearly, you are ready to begin.' }],
+      [{ v: 'W', text: 'This is a listening check. If you can hear this voice clearly, you are ready to begin.' }],
       state.voices
     );
     state.voices = used;
-    const names = used.A === used.B ? used.A.name : `${used.A.name} / ${used.B.name}`;
+    const names = used.W === used.M ? used.W.name : `${used.W.name} / ${used.M.name}`;
     status.textContent = `聞こえていればOKです。(音声: ${names})`;
     status.classList.add('ok');
   } catch {
@@ -75,6 +91,8 @@ $('btn-audio-check').addEventListener('click', async () => {
 });
 
 $('btn-start').addEventListener('click', async () => {
+  const selected = document.querySelector('input[name="plan"]:checked');
+  state.plan = TEST_PLANS[selected?.value] ?? TEST_PLANS.standard;
   if (isTTSSupported() && !state.voices) {
     state.voices = await initVoices();
   }
@@ -87,8 +105,8 @@ $('btn-retry').addEventListener('click', () => location.reload());
 
 function startSection(sec) {
   state.section = sec;
-  const { name, plan } = SECTIONS[sec];
-  $('section-label').textContent = name;
+  const plan = planFor(sec);
+  $('section-label').textContent = SECTIONS[sec].name;
   renderProgress();
   showScreen('screen-test');
   startTimer(plan.timeLimitSec);
@@ -98,6 +116,7 @@ function startSection(sec) {
 function endSection() {
   stopTimer();
   state.audioToken++;
+  stopAudioFile();
   cancelSpeech();
   if (state.section === 'L') {
     startSection('R');
@@ -108,8 +127,8 @@ function endSection() {
 
 function askNext() {
   const sec = state.section;
-  const { bank, plan } = SECTIONS[sec];
-  if (state.answered[sec] >= plan.count) {
+  const { bank } = SECTIONS[sec];
+  if (state.answered[sec] >= planFor(sec).count) {
     endSection();
     return;
   }
@@ -130,7 +149,7 @@ function presentItem() {
   const { item, options } = state.current;
   renderProgress();
 
-  $('question-no').textContent = `Q${state.answered[sec] + 1} / ${SECTIONS[sec].plan.count}`;
+  $('question-no').textContent = `Q${state.answered[sec] + 1} / ${planFor(sec).count}`;
   $('question-text').textContent = item.question;
 
   const passageEl = $('passage');
@@ -165,11 +184,47 @@ function presentItem() {
 }
 
 // ---------- リスニング音声 ----------
+// 優先順: 事前生成音声ファイル(ニューラルTTS) → ブラウザ読み上げ → スクリプト表示
+
+let currentAudio = null;
+
+function playAudioFile(url) {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio(url);
+    currentAudio = audio;
+    audio.onended = () => resolve();
+    audio.onerror = () => reject(new Error('audio-load-failed'));
+    audio.play().catch(reject);
+  });
+}
+
+function stopAudioFile() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.onended = null;
+    currentAudio = null;
+  }
+}
 
 async function playCurrentAudio() {
   const { item } = state.current;
   const token = ++state.audioToken;
   const stateEl = $('audio-state');
+  stopAudioFile();
+
+  stateEl.textContent = '再生中…';
+  stateEl.classList.add('speaking');
+
+  try {
+    await playAudioFile(`audio/${item.id}.m4a`);
+    if (token !== state.audioToken) return;
+    stateEl.textContent = '再生が終わりました。';
+    stateEl.classList.remove('speaking');
+    return;
+  } catch {
+    if (token !== state.audioToken) return;
+    // ファイルが無い環境ではブラウザ読み上げへフォールバック
+  }
 
   if (!isTTSSupported()) {
     showTranscriptFallback();
@@ -183,8 +238,6 @@ async function playCurrentAudio() {
       return;
     }
   }
-  stateEl.textContent = '再生中…';
-  stateEl.classList.add('speaking');
   try {
     await speakScript(item.script, state.voices);
     if (token !== state.audioToken) return;
@@ -231,6 +284,7 @@ function onAnswer(index, btn) {
   if (state.locked) return;
   state.locked = true;
   state.audioToken++;
+  stopAudioFile();
   cancelSpeech();
 
   const sec = state.section;
@@ -288,7 +342,7 @@ function renderTimer() {
 
 function renderProgress() {
   const sec = state.section;
-  const { plan } = SECTIONS[sec];
+  const plan = planFor(sec);
   const dots = $('progress-dots');
   dots.textContent = '';
   for (let i = 0; i < plan.count; i++) {
@@ -338,7 +392,7 @@ function renderSectionResult(sec, dist) {
   const med = quantile(dist, 0.5);
   const [lo, hi] = credibleInterval(dist, 0.8);
   const answered = state.answered[sec];
-  const planCount = SECTIONS[sec].plan.count;
+  const planCount = planFor(sec).count;
 
   const summary = $(`${prefix}-summary`);
   summary.textContent = '';
@@ -364,7 +418,7 @@ function renderCaveats() {
   const box = $('result-caveats');
   box.textContent = '';
   const lines = [
-    'この結果は約10分・最大20問の簡易テストによる推定です。分布の幅は「その範囲に収まる確からしさ」を表します。',
+    `この結果は約${state.plan.minutes}分・最大${state.plan.listening.count + state.plan.reading.count}問の簡易テストによる推定です。分布の幅は「その範囲に収まる確からしさ」を表します。`,
     '問題の難易度は実際の受験データで校正したものではないため、目安としてご利用ください。',
   ];
   for (const t of lines) {

@@ -20,22 +20,34 @@
   <!-- スタート画面 -->
   <section id="screen-start" class="screen">
     <h1 class="headline">10分で、いまの実力を<br>「幅」で知る。</h1>
-    <p class="lead">正誤に合わせて難易度が変わる20問のミニテストです。結果は「あなたのスコアはこのあたり」という確率分布で表示します。1点刻みの断定はしません。</p>
+    <p class="lead">正誤に合わせて難易度が変わる適応式のミニテストです。結果は「あなたのスコアはこのあたり」という確率分布で表示します。1点刻みの断定はしません。</p>
 
     <div class="spec-table" role="table" aria-label="テスト構成">
       <div class="spec-row" role="row">
         <span role="cell">リスニング</span>
-        <span role="cell">8問 / 約4分(音声はブラウザの読み上げ)</span>
+        <span role="cell">会話・アナウンスを聞いて4択で回答</span>
       </div>
       <div class="spec-row" role="row">
         <span role="cell">リーディング</span>
-        <span role="cell">12問 / 約6分(短文穴埋め+短い読解)</span>
+        <span role="cell">短文穴埋め+短い読解(お知らせ・広告・メール)</span>
       </div>
       <div class="spec-row" role="row">
         <span role="cell">結果</span>
         <span role="cell">推定スコアの分布と80%区間(L・R・合計)</span>
       </div>
     </div>
+
+    <fieldset class="length-choice">
+      <legend>テストの長さ</legend>
+      <label class="length-option">
+        <input type="radio" name="plan" value="standard" checked>
+        <span><strong>標準</strong> 約10分 — リスニング8問+リーディング12問</span>
+      </label>
+      <label class="length-option">
+        <input type="radio" name="plan" value="thorough">
+        <span><strong>精密</strong> 約15分 — リスニング12問+リーディング18問。問題数が多いぶん、推定の幅が狭くなります。</span>
+      </label>
+    </fieldset>
 
     <div class="audio-check">
       <button id="btn-audio-check" class="btn ghost" type="button">音声をテストする</button>
@@ -118,7 +130,7 @@
 
 <footer class="site-foot">
   <div class="wrap">
-    <p>このサイトは学習の目安を提供する非公式ツールで、ETSおよび国際ビジネスコミュニケーション協会(IIBC)とは関係ありません。推定値は約10分の簡易テストによるもので、実際のスコアを保証するものではありません。</p>
+    <p>このサイトは学習の目安を提供する非公式ツールで、ETSおよび国際ビジネスコミュニケーション協会(IIBC)とは関係ありません。推定値は短時間の簡易テストによるもので、実際のスコアを保証するものではありません。</p>
     <p lang="en">TOEIC is a registered trademark of ETS. This site is not endorsed or approved by ETS.</p>
   </div>
 </footer>
