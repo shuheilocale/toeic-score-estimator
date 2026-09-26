@@ -30,6 +30,7 @@ function planFor(sec) {
 
 const state = {
   plan: TEST_PLANS.standard,
+  volume: 1,
   section: null,
   posterior: { L: createPosterior(), R: createPosterior() },
   administered: new Set(),
@@ -78,7 +79,8 @@ $('btn-audio-check').addEventListener('click', async () => {
     state.voices = state.voices ?? (await initVoices());
     const used = await speakScript(
       [{ v: 'W', text: 'This is a listening check. If you can hear this voice clearly, you are ready to begin.' }],
-      state.voices
+      state.voices,
+      state.volume
     );
     state.voices = used;
     const names = used.W === used.M ? used.W.name : `${used.W.name} / ${used.M.name}`;
@@ -194,6 +196,8 @@ function presentItem() {
   });
 
   $('transcript').hidden = true;
+  $('audio-panel').classList.remove('preview');
+  $('audio-countdown').hidden = true;
   if (sec === 'L') {
     state.replaysLeft = 1;
     $('audio-panel').hidden = false;
@@ -212,12 +216,34 @@ let currentAudio = null;
 function playAudioFile(url) {
   return new Promise((resolve, reject) => {
     const audio = new Audio(url);
+    audio.volume = state.volume;
     currentAudio = audio;
     audio.onended = () => resolve();
     audio.onerror = () => reject(new Error('audio-load-failed'));
     audio.play().catch(reject);
   });
 }
+
+// ---------- 音量 ----------
+// 端末ごとの好みとして localStorage に保存(取得できない環境でも動く)
+
+const volumeInput = $('volume');
+try {
+  const saved = localStorage.getItem('volume');
+  if (saved !== null) state.volume = Math.min(1, Math.max(0, Number(saved) || 0));
+} catch {
+  // プライベートモード等では既定値のまま
+}
+volumeInput.value = String(Math.round(state.volume * 100));
+volumeInput.addEventListener('input', () => {
+  state.volume = volumeInput.value / 100;
+  if (currentAudio) currentAudio.volume = state.volume;
+  try {
+    localStorage.setItem('volume', String(state.volume));
+  } catch {
+    // 保存できなくても動作には影響しない
+  }
+});
 
 function stopAudioFile() {
   if (currentAudio) {
@@ -237,15 +263,29 @@ async function playCurrentAudio(immediate = false) {
   const { item } = state.current;
   const token = ++state.audioToken;
   const stateEl = $('audio-state');
+  const panel = $('audio-panel');
+  const countdown = $('audio-countdown');
   stopAudioFile();
 
   if (!immediate) {
     stateEl.classList.remove('speaking');
     stateEl.textContent = item.image
-      ? '写真をよく見てください。まもなく選択肢が読み上げられます…'
-      : '設問を確認してください。まもなく音声が始まります…';
-    await sleep(item.image ? PREVIEW_MS_PHOTO : PREVIEW_MS_NORMAL);
-    if (token !== state.audioToken) return;
+      ? '写真をよく見てください。まもなく選択肢が読み上げられます。'
+      : '設問を確認してください。まもなく音声が始まります。';
+    panel.classList.add('preview');
+    $('btn-replay').hidden = true; // まだ再生していないので隠す
+    countdown.hidden = false;
+    let remain = Math.round((item.image ? PREVIEW_MS_PHOTO : PREVIEW_MS_NORMAL) / 1000);
+    countdown.textContent = remain;
+    while (remain > 0) {
+      await sleep(1000);
+      if (token !== state.audioToken) return;
+      remain--;
+      countdown.textContent = Math.max(remain, 1);
+    }
+    panel.classList.remove('preview');
+    countdown.hidden = true;
+    $('btn-replay').hidden = false;
   }
 
   stateEl.textContent = '再生中…';
@@ -275,7 +315,7 @@ async function playCurrentAudio(immediate = false) {
     }
   }
   try {
-    await speakScript(item.script, state.voices);
+    await speakScript(item.script, state.voices, state.volume);
     if (token !== state.audioToken) return;
     stateEl.textContent = '再生が終わりました。';
     stateEl.classList.remove('speaking');

@@ -58,6 +58,9 @@
 
 * { box-sizing: border-box; }
 
+/* hidden属性はdisplay指定を持つ要素(flex/grid)にも常に勝たせる */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--paper);
@@ -97,7 +100,27 @@ button {
 .site-head .wrap {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   min-height: 52px;
+}
+
+.volume-ctl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.volume-label {
+  font-size: 0.8rem;
+  color: var(--ink-2);
+}
+.volume-ctl input[type='range'] {
+  width: 96px;
+  accent-color: var(--ink);
+}
+@media (max-width: 420px) {
+  .volume-ctl input[type='range'] { width: 70px; }
 }
 .brand {
   font-weight: 600;
@@ -286,6 +309,31 @@ button {
 }
 .audio-state { font-size: 0.9rem; color: var(--ink-2); }
 .audio-state.speaking { color: var(--accent-deep); font-weight: 600; }
+
+/* 再生前の準備時間: パネルを強調し、カウントダウンの丸数字を出す */
+.audio-panel.preview {
+  border-color: var(--accent);
+  background: var(--wash);
+}
+.audio-panel.preview .audio-state {
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.audio-countdown {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-deep);
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-deep);
+  background: var(--surface);
+}
 
 .passage {
   border: 1px solid var(--hairline);

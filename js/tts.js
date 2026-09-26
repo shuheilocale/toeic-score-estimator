@@ -129,7 +129,7 @@ export function initVoices() {
 
 // script([{v:'A'|'B', text}])を順番に読み上げる。resolve時に実際に使った
 // ボイスペアを返す。英語ボイスが見つからなければ reject('no-english-voice')。
-export function speakScript(script, pair) {
+export function speakScript(script, pair, volume = 1) {
   return new Promise((resolve, reject) => {
     if (!isTTSSupported()) {
       reject(new Error('speechSynthesis not supported'));
@@ -177,6 +177,7 @@ export function speakScript(script, pair) {
       // システム既定(日本語等)の声で読まれる環境があるため。
       u.lang = voice.lang || 'en-US';
       u.rate = SPEECH_RATE;
+      u.volume = volume;
       u.pitch = line.v === 'M' && mNeedsPitchDown ? 0.8 : 1.0;
       u.onend = () => setTimeout(speakNext, 350);
       u.onerror = (e) => {

@@ -12,6 +12,10 @@
 <header class="site-head">
   <div class="wrap">
     <a class="brand" href="./">TOEIC<span class="reg">®</span>スコア推定テスト</a>
+    <label class="volume-ctl" for="volume">
+      <span class="volume-label">音量</span>
+      <input type="range" id="volume" min="0" max="100" step="10" value="100" aria-label="音量">
+    </label>
   </div>
 </header>
 
@@ -68,6 +72,7 @@
     <div id="timer-bar" class="timer-bar"><div id="timer-fill" class="timer-fill"></div></div>
 
     <div id="audio-panel" class="audio-panel" hidden>
+      <span id="audio-countdown" class="audio-countdown" hidden aria-hidden="true"></span>
       <span id="audio-state" class="audio-state">音声を再生します…</span>
       <button id="btn-replay" class="btn ghost small" type="button">もう一度聞く(残り1回)</button>
     </div>
