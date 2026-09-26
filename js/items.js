@@ -8,14 +8,14 @@ export const TEST_PLANS = {
     key: 'standard',
     label: '標準',
     minutes: 10,
-    listening: { count: 8, timeLimitSec: 240, photoCount: 1 },
+    listening: { count: 8, timeLimitSec: 270, photoCount: 1 },
     reading: { count: 12, timeLimitSec: 360 },
   },
   thorough: {
     key: 'thorough',
     label: '精密',
     minutes: 15,
-    listening: { count: 12, timeLimitSec: 360, photoCount: 2 },
+    listening: { count: 12, timeLimitSec: 405, photoCount: 2 },
     reading: { count: 18, timeLimitSec: 540 },
   },
 };

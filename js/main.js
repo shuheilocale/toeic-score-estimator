@@ -227,11 +227,26 @@ function stopAudioFile() {
   }
 }
 
-async function playCurrentAudio() {
+// 本物のTOEIC同様、読み上げ前に設問・写真を確認する間を置く
+// (実試験では "Number 1. Look at the picture..." のリードインに相当)
+const PREVIEW_MS_PHOTO = 4000;
+const PREVIEW_MS_NORMAL = 2000;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function playCurrentAudio(immediate = false) {
   const { item } = state.current;
   const token = ++state.audioToken;
   const stateEl = $('audio-state');
   stopAudioFile();
+
+  if (!immediate) {
+    stateEl.classList.remove('speaking');
+    stateEl.textContent = item.image
+      ? '写真をよく見てください。まもなく選択肢が読み上げられます…'
+      : '設問を確認してください。まもなく音声が始まります…';
+    await sleep(item.image ? PREVIEW_MS_PHOTO : PREVIEW_MS_NORMAL);
+    if (token !== state.audioToken) return;
+  }
 
   stateEl.textContent = '再生中…';
   stateEl.classList.add('speaking');
@@ -292,7 +307,7 @@ $('btn-replay').addEventListener('click', () => {
   if (state.replaysLeft <= 0) return;
   state.replaysLeft--;
   updateReplayButton();
-  playCurrentAudio();
+  playCurrentAudio(true); // 再再生は待ち時間なしで即開始
 });
 
 function updateReplayButton() {
